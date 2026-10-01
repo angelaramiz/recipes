@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Recursos Minecraft</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .container { max-width: 600px; margin: 0 auto; }
+  h1 { text-align: center; color: #e8a0bf; margin-bottom: 8px; font-size: 1.6rem; }
+  .subtitle { text-align: center; color: #888; margin-bottom: 30px; font-size: 0.9rem; }
+  .card {
+    background: #16213e;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid #2a2a4a;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .card h2 { color: #e8a0bf; font-size: 1.1rem; margin-bottom: 16px; }
+  .form-group { margin-bottom: 16px; }
+  label { display: block; margin-bottom: 6px; font-size: 0.85rem; color: #aaa; font-weight: 500; }
+  select, input[type="text"], input[type="number"] {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid #2a2a4a; background: #0f3460; color: #fff;
+    font-size: 1rem; outline: none; transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  select:focus, input:focus { border-color: #e8a0bf; }
+  select option { background: #16213e; color: #fff; }
+  .btn {
+    width: 100%; padding: 14px; border-radius: 12px; border: none;
+    background: linear-gradient(135deg, #e8a0bf, #c47a9e);
+    color: #1a1a2e; font-size: 1rem; font-weight: 700;
+    cursor: pointer; transition: transform 0.15s, box-shadow 0.2s; margin-top: 8px;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(232,160,191,0.3); }
+  .btn:active { transform: translateY(0); }
+  .btn-secondary { background: #0f3460; color: #e8a0bf; border: 1px solid #e8a0bf; }
+  .btn-secondary:hover { background: #1a4a7a; }
+  .btn-danger { background: linear-gradient(135deg, #c0392b, #e74c3c); color: #fff; }
+  .btn-small { padding: 10px 14px; font-size: 0.9rem; }
+  .result-box {
+    background: #0f3460; border-radius: 12px; padding: 20px;
+    text-align: center; border: 1px solid #2a2a4a;
+  }
+  .result-label { font-size: 0.85rem; color: #888; margin-bottom: 6px; }
+  .result-value { font-size: 2.2rem; font-weight: 700; color: #e8a0bf; }
+  .result-detail { font-size: 0.85rem; color: #aaa; margin-top: 6px; }
+  .table-card { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { text-align: left; padding: 10px 12px; color: #e8a0bf; border-bottom: 2px solid #2a2a4a; font-weight: 600; }
+  td { padding: 10px 12px; border-bottom: 1px solid #1e1e3a; }
+  tr:hover td { background: rgba(232,160,191,0.05); }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .badge-lingote { background: #4a6fa5; color: #fff; }
+  .badge-polvo { background: #c0392b; color: #fff; }
+  .badge-gema { background: #27ae60; color: #fff; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tab {
+    flex: 1; min-width: 100px; padding: 10px; text-align: center; border-radius: 10px;
+    background: #16213e; border: 1px solid #2a2a4a; color: #888;
+    cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;
+  }
+  .tab.active { background: #0f3460; color: #e8a0bf; border-color: #e8a0bf; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #1e1e3a; font-size: 0.85rem; }
+  .history-item:last-child { border-bottom: none; }
+  .history-text { color: #ccc; }
+  .history-result { color: #e8a0bf; font-weight: 700; }
+  .empty-msg { text-align: center; color: #666; padding: 20px; font-size: 0.9rem; }
+  .swap-btn {
+    background: #0f3460; border: 1px solid #e8a0bf; color: #e8a0bf;
+    width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+    font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .swap-btn:hover { background: #e8a0bf; color: #1a1a2e; transform: rotate(180deg); }
+  .direction-row { display: flex; align-items: flex-end; gap: 12px; }
+  .direction-row .form-group { flex: 1; margin-bottom: 0; }
+
+  .receta-card {
+    background: #0f3460; border-radius: 12px; padding: 16px;
+    margin-bottom: 12px; border: 1px solid #2a2a4a; transition: all 0.2s;
+  }
+  .receta-card:hover { border-color: #e8a0bf; }
+  .receta-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+  .receta-name { font-size: 1.05rem; font-weight: 700; color: #e8a0bf; }
+  .receta-actions { display: flex; gap: 6px; }
+  .receta-actions button {
+    background: #16213e; border: 1px solid #2a2a4a; color: #aaa;
+    padding: 6px 10px; border-radius: 8px; cursor: pointer;
+    font-size: 0.8rem; transition: all 0.2s;
+  }
+  .receta-actions button:hover { color: #e8a0bf; border-color: #e8a0bf; }
+  .receta-actions button.delete:hover { color: #e74c3c; border-color: #e74c3c; }
+  .receta-ingredients { font-size: 0.85rem; color: #aaa; padding-left: 16px; border-left: 2px solid #2a2a4a; list-style: none; }
+  .receta-ingredients li { padding: 3px 0; }
+  .receta-ingredients .ing-recipe { color: #8e44ad; font-weight: 600; }
+  .receta-ingredients .ing-material { color: #4a6fa5; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: #16213e; border-radius: 16px; border: 1px solid #e8a0bf;
+    width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-header {
+    padding: 20px 24px; border-bottom: 1px solid #2a2a4a;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-header h3 { color: #e8a0bf; font-size: 1.1rem; }
+  .modal-close {
+    background: none; border: none; color: #e8a0bf;
+    font-size: 1.5rem; cursor: pointer; padding: 4px 8px; border-radius: 8px;
+  }
+  .modal-close:hover { background: rgba(232,160,191,0.15); }
+  .modal-body { padding: 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid #2a2a4a; display: flex; gap: 10px; }
+  .modal-footer .btn { margin-top: 0; flex: 1; }
+
+  .ing-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .ing-row select { flex: 2; }
+  .ing-row input { flex: 1; }
+  .ing-row .remove-btn {
+    background: #c0392b; border: none; color: #fff;
+    width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+    font-size: 1.1rem; flex-shrink: 0;
+  }
+  .add-ing-btn {
+    background: #27ae60; border: none; color: #fff;
+    padding: 10px; border-radius: 10px; cursor: pointer;
+    font-size: 0.9rem; font-weight: 600; width: 100%; margin-top: 8px;
+  }
+  .add-ing-btn:hover { background: #2ecc71; }
+
+  .calc-tab {
+    position: fixed; right: 0; top: 25%;
+    background: linear-gradient(135deg, #e8a0bf, #c47a9e);
+    color: #1a1a2e; padding: 16px 10px; border-radius: 12px 0 0 12px;
+    cursor: pointer; font-weight: 700; font-size: 0.85rem;
+    writing-mode: vertical-rl; z-index: 999;
+    box-shadow: -4px 0 20px rgba(232,160,191,0.4);
+    transition: all 0.3s; letter-spacing: 1px;
+    border: 2px solid #e8a0bf; border-right: none;
+  }
+  .calc-tab:hover { padding-right: 14px; }
+  .calc-tab.active { right: 320px; }
+  .calc-tab-icon { font-size: 1.4rem; display: block; margin-bottom: 6px; writing-mode: horizontal-tb; }
+  .calc-drawer {
+    position: fixed; right: -320px; top: 0; width: 320px; height: 100vh;
+    background: #16213e; border-left: 2px solid #e8a0bf;
+    z-index: 1000; transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -10px 0 40px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .calc-drawer.open { right: 0; }
+  .calc-header {
+    padding: 16px 20px; background: linear-gradient(135deg, #0f3460, #16213e);
+    border-bottom: 1px solid #2a2a4a; display: flex; justify-content: space-between; align-items: center;
+  }
+  .calc-header h3 { color: #e8a0bf; font-size: 1rem; }
+  .calc-close {
+    background: none; border: none; color: #e8a0bf;
+    font-size: 1.5rem; cursor: pointer; padding: 4px 8px; border-radius: 8px;
+  }
+  .calc-close:hover { background: rgba(232,160,191,0.15); }
+  .calc-display { padding: 20px; background: #0a1628; border-bottom: 1px solid #2a2a4a; }
+  .calc-expression { text-align: right; color: #888; font-size: 0.85rem; min-height: 20px; word-break: break-all; margin-bottom: 4px; }
+  .calc-result { text-align: right; color: #e8a0bf; font-size: 2rem; font-weight: 700; word-break: break-all; min-height: 40px; }
+  .calc-buttons {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    padding: 16px; flex: 1; overflow-y: auto;
+  }
+  .calc-btn {
+    padding: 16px; border: none; border-radius: 12px; font-size: 1.1rem;
+    font-weight: 600; cursor: pointer; transition: all 0.15s;
+    background: #0f3460; color: #fff; border: 1px solid #2a2a4a;
+  }
+  .calc-btn:hover { background: #1a4a7a; transform: translateY(-1px); }
+  .calc-btn:active { transform: translateY(0); }
+  .calc-btn.op { background: #2a2a4a; color: #e8a0bf; }
+  .calc-btn.op:hover { background: #3a3a5a; }
+  .calc-btn.eq {
+    background: linear-gradient(135deg, #e8a0bf, #c47a9e);
+    color: #1a1a2e; grid-column: span 2;
+  }
+  .calc-btn.eq:hover { box-shadow: 0 4px 15px rgba(232,160,191,0.4); }
+  .calc-btn.clear { background: #c0392b; color: #fff; }
+  .calc-btn.clear:hover { background: #e74c3c; }
+  .calc-btn.special { background: #4a6fa5; color: #fff; }
+  .calc-history {
+    padding: 12px 16px; border-top: 1px solid #2a2a4a;
+    max-height: 120px; overflow-y: auto; background: #0a1628;
+  }
+  .calc-history-title { font-size: 0.75rem; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+  .calc-history-item { font-size: 0.8rem; color: #aaa; padding: 3px 0; border-bottom: 1px solid #1a1a3a; text-align: right; }
+  .calc-history-item:last-child { border-bottom: none; }
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 998; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .overlay.active { opacity: 1; pointer-events: all; }
+
+  .resolucion-box { background: #0f3460; border-radius: 12px; padding: 16px; margin-top: 12px; border: 1px solid #2a2a4a; }
+  .resolucion-title { font-size: 0.85rem; color: #888; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .resolucion-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1e1e3a; font-size: 0.9rem; }
+  .resolucion-item:last-child { border-bottom: none; }
+  .resolucion-item .mat-name { color: #ccc; }
+  .resolucion-item .mat-qty { color: #e8a0bf; font-weight: 700; }
+  .tree-item { padding: 4px 0; font-size: 0.85rem; color: #aaa; }
+  .tree-item .tree-qty { color: #e8a0bf; font-weight: 600; }
+  .tree-item .tree-recipe { color: #8e44ad; font-weight: 600; }
+
+  @media (max-width: 480px) {
+    .calc-drawer { width: 100%; right: -100%; }
+    .calc-tab.active { right: calc(100% - 40px); }
+    .tabs { gap: 4px; }
+    .tab { font-size: 0.8rem; padding: 8px 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Calculadora de Recursos</h1>
+  <p class="subtitle">Conversion bidireccional + Recetas</p>
+
+  <div class="tabs" id="mainTabs">
+    <div class="tab active" data-tab="calc">Calcular</div>
+    <div class="tab" data-tab="recetas">Recetas</div>
+    <div class="tab" data-tab="materials">Materiales</div>
+    <div class="tab" data-tab="history">Historial</div>
+  </div>
+
+  <div id="tab-calc" class="tab-content active">
+    <div class="card">
+      <h2>Conversion Bidireccional</h2>
+      <div class="form-group">
+        <label>Tipo de material</label>
+        <select id="materialType">
+          <option value="">-- Seleccionar tipo --</option>
+          <option value="lingote">Lingote (Hierro, Oro, Cobre...)</option>
+          <option value="polvo">Polvo (Redstone, Polvora...)</option>
+          <option value="gema">Gema (Diamante, Esmeralda...)</option>
+        </select>
+      </div>
+      <div class="direction-row">
+        <div class="form-group">
+          <label>De</label>
+          <select id="fromType"><option value="">-- De --</option></select>
+        </div>
+        <button class="swap-btn" id="swapBtn" type="button"></button>
+        <div class="form-group">
+          <label>A</label>
+          <select id="toType"><option value="">-- A --</option></select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:16px;">
+        <label>Material</label>
+        <select id="material"><option value="">-- Seleccionar --</option></select>
+      </div>
+      <div class="form-group">
+        <label>Cantidad</label>
+        <input type="number" id="quantity" min="1" value="1" placeholder="Cantidad">
+      </div>
+      <button class="btn" id="btnCalcular" type="button">Calcular</button>
+    </div>
+    <div class="card" id="resultCard" style="display:none;">
+      <h2>Resultado</h2>
+      <div class="result-box">
+        <div class="result-label">Necesitas</div>
+        <div class="result-value" id="resultValue">0</div>
+        <div class="result-detail" id="resultDetail"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-recetas" class="tab-content">
+    <div class="card">
+      <h2>Mis Recetas</h2>
+      <button class="btn" id="btnNuevaReceta" type="button">+ Nueva Receta</button>
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <button class="btn btn-secondary btn-small" id="btnExportar" type="button" style="flex:1;">Exportar</button>
+        <button class="btn btn-secondary btn-small" id="btnImportar" type="button" style="flex:1;">Importar</button>
+        <input type="file" id="importFile" accept=".json" style="display:none">
+      </div>
+    </div>
+    <div id="recetasList"></div>
+  </div>
+
+  <div id="tab-materials" class="tab-content">
+    <div class="card table-card">
+      <h2>Materiales</h2>
+      <table>
+        <thead><tr><th>Codigo</th><th>Nombre</th><th>Tipo</th></tr></thead>
+        <tbody id="materialsTable"></tbody>
+      </table>
+    </div>
+    <div class="card table-card">
+      <h2>Conversiones Disponibles</h2>
+      <table>
+        <thead><tr><th>De</th><th>A</th><th>Ratio</th><th>Inverso</th></tr></thead>
+        <tbody id="ratiosTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="tab-history" class="tab-content">
+    <div class="card">
+      <h2>Historial</h2>
+      <div id="historyList"><div class="empty-msg">Aun no hay calculos</div></div>
+      <button class="btn btn-danger" id="btnClearHistory" type="button" style="margin-top:16px;">Limpiar historial</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="recetaModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Nueva Receta</h3>
+      <button class="modal-close" id="btnCloseModal" type="button">X</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nombre de la receta</label>
+        <input type="text" id="recetaName" placeholder="Ej: Bateria">
+      </div>
+      <div class="form-group">
+        <label>Ingredientes</label>
+        <div id="ingredientsList"></div>
+        <button class="add-ing-btn" id="btnAddIng" type="button">+ Agregar ingrediente</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="btnCancelModal" type="button">Cancelar</button>
+      <button class="btn" id="btnSaveReceta" type="button">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="detalleModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="detalleTitle">Detalle</h3>
+      <button class="modal-close" id="btnCloseDetalle" type="button">X</button>
+    </div>
+    <div class="modal-body" id="detalleBody"></div>
+    <div class="modal-footer">
+      <button class="btn" id="btnCloseDetalle2" type="button">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="calc-tab" id="calcTab">
+  <span class="calc-tab-icon"></span>
+  CALC
+</div>
+<div class="calc-drawer" id="calcDrawer">
+  <div class="calc-header">
+    <h3>Calculadora Manual</h3>
+    <button class="calc-close" id="btnCloseCalc" type="button">X</button>
+  </div>
+  <div class="calc-display">
+    <div class="calc-expression" id="calcExpression"></div>
+    <div class="calc-result" id="calcResult">0</div>
+  </div>
+  <div class="calc-buttons" id="calcButtons">
+    <button class="calc-btn clear" data-action="clear" type="button">C</button>
+    <button class="calc-btn special" data-action="back" type="button">DEL</button>
+    <button class="calc-btn special" data-action="percent" type="button">%</button>
+    <button class="calc-btn op" data-action="op" data-op="/" type="button">/</button>
+    <button class="calc-btn" data-action="num" data-num="7" type="button">7</button>
+    <button class="calc-btn" data-action="num" data-num="8" type="button">8</button>
+    <button class="calc-btn" data-action="num" data-num="9" type="button">9</button>
+    <button class="calc-btn op" data-action="op" data-op="*" type="button">x</button>
+    <button class="calc-btn" data-action="num" data-num="4" type="button">4</button>
+    <button class="calc-btn" data-action="num" data-num="5" type="button">5</button>
+    <button class="calc-btn" data-action="num" data-num="6" type="button">6</button>
+    <button class="calc-btn op" data-action="op" data-op="-" type="button">-</button>
+    <button class="calc-btn" data-action="num" data-num="1" type="button">1</button>
+    <button class="calc-btn" data-action="num" data-num="2" type="button">2</button>
+    <button class="calc-btn" data-action="num" data-num="3" type="button">3</button>
+    <button class="calc-btn op" data-action="op" data-op="+" type="button">+</button>
+    <button class="calc-btn" data-action="num" data-num="0" type="button">0</button>
+    <button class="calc-btn" data-action="dot" type="button">.</button>
+    <button class="calc-btn eq" data-action="equals" type="button">=</button>
+  </div>
+  <div class="calc-history" id="calcHistory">
+    <div class="calc-history-title">Historial</div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var materiales = [
+    { codigo: "fe", nombre: "Hierro", tipo: "lingote" },
+    { codigo: "au", nombre: "Oro", tipo: "lingote" },
+    { codigo: "cu", nombre: "Cobre", tipo: "lingote" },
+    { codigo: "nq", nombre: "Netherite", tipo: "lingote" },
+    { codigo: "rd", nombre: "Redstone", tipo: "polvo" },
+    { codigo: "pv", nombre: "Polvora", tipo: "polvo" },
+    { codigo: "di", nombre: "Diamante", tipo: "gema" },
+    { codigo: "em", nombre: "Esmeralda", tipo: "gema" },
+    { codigo: "la", nombre: "Lapislazuli", tipo: "gema" },
+    { codigo: "qi", nombre: "Cuarzo del Nether", tipo: "gema" },
+    { codigo: "am", nombre: "Amatista", tipo: "gema" }
+  ];
+
+  var conversiones = [
+    { de: "pepita", a: "lingote", ratio: 9 },
+    { de: "lingote", a: "pepita", ratio: 1/9 },
+    { de: "lingote", a: "bloque", ratio: 9 },
+    { de: "bloque", a: "lingote", ratio: 1/9 },
+    { de: "pepita", a: "bloque", ratio: 81 },
+    { de: "bloque", a: "pepita", ratio: 1/81 }
+  ];
+
+  var typeOptions = {
+    lingote: ["pepita", "lingote", "bloque"],
+    polvo: ["polvo"],
+    gema: ["gema"]
+  };
+
+  var unitNames = {
+    pepita: "Pepita(s)", lingote: "Lingote(s)", bloque: "Bloque(s)",
+    polvo: "Polvo(s)", gema: "Gema(s)"
+  };
+
+  var recetas = [];
+  try {
+    recetas = JSON.parse(localStorage.getItem('mc_recetas') || '[]');
+  } catch(e) { recetas = []; }
+
+  var editingRecetaId = null;
+  var calcExpr = '';
+  var calcDisplay = '0';
+  var calcJustEvaluated = false;
+  var calcHist = [];
+
+  function saveRecetasToStorage() {
+    try { localStorage.setItem('mc_recetas', JSON.stringify(recetas)); } catch(e) {}
+  }
+
+  function generateId() {
+    return 'r_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+  }
+
+  function init() {
+    renderMaterialsTable();
+    renderRatiosTable();
+    renderRecetas();
+    setupTabs();
+    setupCalcButtons();
+    setupAllListeners();
+  }
+
+  function setupTabs() {
+    var tabs = document.querySelectorAll('#mainTabs .tab');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].addEventListener('click', function() {
+        var tabName = this.getAttribute('data-tab');
+        document.querySelectorAll('#mainTabs .tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+        this.classList.add('active');
+        document.getElementById('tab-' + tabName).classList.add('active');
+        if (tabName === 'history') renderHistory();
+        if (tabName === 'recetas') renderRecetas();
+      });
+    }
+  }
+
+  function setupCalcButtons() {
+    var buttons = document.querySelectorAll('#calcButtons .calc-btn');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function() {
+        var action = this.getAttribute('data-action');
+        if (action === 'num') calcNum(this.getAttribute('data-num'));
+        else if (action === 'op') calcOp(this.getAttribute('data-op'));
+        else if (action === 'dot') calcDot();
+        else if (action === 'equals') calcEquals();
+        else if (action === 'clear') calcClear();
+        else if (action === 'back') calcBackspace();
+        else if (action === 'percent') calcPercent();
+      });
+    }
+  }
+
+  function setupAllListeners() {
+    document.getElementById('materialType').addEventListener('change', updateTypeSelects);
+    document.getElementById('fromType').addEventListener('change', updateMaterialSelect);
+    document.getElementById('toType').addEventListener('change', updateMaterialSelect);
+    document.getElementById('swapBtn').addEventListener('click', swapDirection);
+    document.getElementById('btnCalcular').addEventListener('click', calculate);
+    document.getElementById('btnNuevaReceta').addEventListener('click', function() { openRecetaModal(null); });
+    document.getElementById('btnExportar').addEventListener('click', exportRecetas);
+    document.getElementById('btnImportar').addEventListener('click', function() { document.getElementById('importFile').click(); });
+    document.getElementById('importFile').addEventListener('change', importRecetas);
+    document.getElementById('btnClearHistory').addEventListener('click', clearHistory);
+    document.getElementById('btnCloseModal').addEventListener('click', closeRecetaModal);
+    document.getElementById('btnCancelModal').addEventListener('click', closeRecetaModal);
+    document.getElementById('btnSaveReceta').addEventListener('click', saveReceta);
+    document.getElementById('btnAddIng').addEventListener('click', function() { addIngredientRow(); });
+    document.getElementById('btnCloseDetalle').addEventListener('click', closeDetalleModal);
+    document.getElementById('btnCloseDetalle2').addEventListener('click', closeDetalleModal);
+    document.getElementById('calcTab').addEventListener('click', toggleCalc);
+    document.getElementById('btnCloseCalc').addEventListener('click', toggleCalc);
+    document.getElementById('overlay').addEventListener('click', toggleCalc);
+
+    document.getElementById('recetaModal').addEventListener('click', function(e) {
+      if (e.target.id === 'recetaModal') closeRecetaModal();
+    });
+    document.getElementById('detalleModal').addEventListener('click', function(e) {
+      if (e.target.id === 'detalleModal') closeDetalleModal();
+    });
+
+    document.addEventListener('keydown', function(e) {
+      var drawer = document.getElementById('calcDrawer');
+      if (!drawer.classList.contains('open')) return;
+      if (e.key >= '0' && e.key <= '9') calcNum(e.key);
+      else if (e.key === '.') calcDot();
+      else if (e.key === '+') calcOp('+');
+      else if (e.key === '-') calcOp('-');
+      else if (e.key === '*') calcOp('*');
+      else if (e.key === '/') { e.preventDefault(); calcOp('/'); }
+      else if (e.key === 'Enter' || e.key === '=') calcEquals();
+      else if (e.key === 'Backspace') calcBackspace();
+      else if (e.key === 'Escape' || e.key === 'c' || e.key === 'C') calcClear();
+    });
+  }
+
+  function updateTypeSelects() {
+    var matType = document.getElementById('materialType').value;
+    var fromSel = document.getElementById('fromType');
+    var toSel = document.getElementById('toType');
+    var matSel = document.getElementById('material');
+    fromSel.innerHTML = '<option value="">-- De --</option>';
+    toSel.innerHTML = '<option value="">-- A --</option>';
+    matSel.innerHTML = '<option value="">-- Seleccionar --</option>';
+    if (!matType) return;
+    var options = typeOptions[matType];
+    for (var i = 0; i < options.length; i++) {
+      var opt = options[i];
+      fromSel.innerHTML += '<option value="' + opt + '">' + opt.charAt(0).toUpperCase() + opt.slice(1) + '</option>';
+      toSel.innerHTML += '<option value="' + opt + '">' + opt.charAt(0).toUpperCase() + opt.slice(1) + '</option>';
+    }
+  }
+
+  function updateMaterialSelect() {
+    var matType = document.getElementById('materialType').value;
+    var matSel = document.getElementById('material');
+    matSel.innerHTML = '<option value="">-- Seleccionar --</option>';
+    if (!matType) return;
+    for (var i = 0; i < materiales.length; i++) {
+      if (materiales[i].tipo === matType) {
+        matSel.innerHTML += '<option value="' + materiales[i].codigo + '">' + materiales[i].nombre + ' (' + materiales[i].codigo + ')</option>';
+      }
+    }
+  }
+
+  function swapDirection() {
+    var from = document.getElementById('fromType');
+    var to = document.getElementById('toType');
+    var temp = from.value;
+    from.value = to.value;
+    to.value = temp;
+  }
+
+  function calculate() {
+    var matType = document.getElementById('materialType').value;
+    var fromType = document.getElementById('fromType').value;
+    var toType = document.getElementById('toType').value;
+    var matCode = document.getElementById('material').value;
+    var qty = parseFloat(document.getElementById('quantity').value);
+    if (!matType || !fromType || !toType || !matCode || !qty || qty < 1) {
+      alert('Completa todos los campos');
+      return;
+    }
+    if (fromType === toType) {
+      alert('Selecciona tipos diferentes');
+      return;
+    }
+    var conversion = null;
+    for (var i = 0; i < conversiones.length; i++) {
+      if (conversiones[i].de === fromType && conversiones[i].a === toType) {
+        conversion = conversiones[i];
+        break;
+      }
+    }
+    var material = null;
+    for (var j = 0; j < materiales.length; j++) {
+      if (materiales[j].codigo === matCode) {
+        material = materiales[j];
+        break;
+      }
+    }
+    if (!conversion || !material) {
+      alert('Conversion no encontrada');
+      return;
+    }
+    var result = qty * conversion.ratio;
+    var resultFormatted = Number.isInteger(result) ? result : parseFloat(result.toFixed(4));
+    document.getElementById('resultValue').textContent = resultFormatted;
+    document.getElementById('resultDetail').textContent = qty + ' ' + unitNames[fromType] + ' de ' + material.nombre + ' = ' + resultFormatted + ' ' + unitNames[toType].toLowerCase();
+    document.getElementById('resultCard').style.display = 'block';
+    addToHistory(qty + ' ' + fromType + ' -> ' + toType + ' (' + material.nombre + ')', resultFormatted + ' ' + toType);
+  }
+
+  function addToHistory(text, result) {
+    var history = [];
+    try { history = JSON.parse(localStorage.getItem('mc_history') || '[]'); } catch(e) {}
+    history.unshift({ text: text, result: result, time: new Date().toLocaleTimeString() });
+    if (history.length > 20) history = history.slice(0, 20);
+    try { localStorage.setItem('mc_history', JSON.stringify(history)); } catch(e) {}
+    renderHistory();
+  }
+
+  function renderHistory() {
+    var history = [];
+    try { history = JSON.parse(localStorage.getItem('mc_history') || '[]'); } catch(e) {}
+    var container = document.getElementById('historyList');
+    if (history.length === 0) {
+      container.innerHTML = '<div class="empty-msg">Aun no hay calculos</div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < history.length; i++) {
+      var h = history[i];
+      html += '<div class="history-item"><div><div class="history-text">' + h.text + '</div><div style="font-size:0.75rem; color:#666;">' + h.time + '</div></div><div class="history-result">' + h.result + '</div></div>';
+    }
+    container.innerHTML = html;
+  }
+
+  function clearHistory() {
+    try { localStorage.removeItem('mc_history'); } catch(e) {}
+    renderHistory();
+  }
+
+  function renderMaterialsTable() {
+    var tbody = document.getElementById('materialsTable');
+    var badgeClass = { lingote: 'badge-lingote', polvo: 'badge-polvo', gema: 'badge-gema' };
+    var html = '';
+    for (var i = 0; i < materiales.length; i++) {
+      var m = materiales[i];
+      html += '<tr><td><strong>' + m.codigo + '</strong></td><td>' + m.nombre + '</td><td><span class="badge ' + (badgeClass[m.tipo] || '') + '">' + m.tipo + '</span></td></tr>';
+    }
+    tbody.innerHTML = html;
+  }
+
+  function renderRatiosTable() {
+    var tbody = document.getElementById('ratiosTable');
+    var html = '';
+    for (var i = 0; i < conversiones.length; i++) {
+      var c = conversiones[i];
+      if (c.ratio >= 1) {
+        var inv = null;
+        for (var j = 0; j < conversiones.length; j++) {
+          if (conversiones[j].de === c.a && conversiones[j].a === c.de) {
+            inv = conversiones[j];
+            break;
+          }
+        }
+        html += '<tr><td>' + c.de + '</td><td>' + c.a + '</td><td><strong>1:' + c.ratio + '</strong></td><td><strong>1:' + (inv ? (1/inv.ratio).toFixed(0) : '?') + '</strong></td></tr>';
+      }
+    }
+    tbody.innerHTML = html;
+  }
+
+  function renderRecetas() {
+    var container = document.getElementById('recetasList');
+    if (recetas.length === 0) {
+      container.innerHTML = '<div class="card"><div class="empty-msg">No hay recetas creadas. Crea la primera!</div></div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < recetas.length; i++) {
+      var r = recetas[i];
+      var ingsHtml = '';
+      for (var j = 0; j < r.ingredientes.length; j++) {
+        var ing = r.ingredientes[j];
+        var esReceta = false;
+        var nombre = ing.id;
+        for (var k = 0; k < recetas.length; k++) {
+          if (recetas[k].id === ing.id) {
+            esReceta = true;
+            nombre = recetas[k].nombre;
+            break;
+          }
+        }
+        if (!esReceta) {
+          for (var m = 0; m < materiales.length; m++) {
+            if (materiales[m].codigo === ing.id) {
+              nombre = materiales[m].nombre;
+              break;
+            }
+          }
+        }
+        var cls = esReceta ? 'ing-recipe' : 'ing-material';
+        ingsHtml += '<li class="' + cls + '">' + ing.cantidad + ' x ' + nombre + '</li>';
+      }
+      html += '<div class="receta-card"><div class="receta-header"><div class="receta-name">' + r.nombre + '</div><div class="receta-actions"><button type="button" class="btn-ver" data-id="' + r.id + '">Ver</button><button type="button" class="btn-edit" data-id="' + r.id + '">Editar</button><button type="button" class="delete btn-del" data-id="' + r.id + '">Eliminar</button></div></div><ul class="receta-ingredients">' + ingsHtml + '</ul></div>';
+    }
+    container.innerHTML = html;
+
+    var verBtns = container.querySelectorAll('.btn-ver');
+    for (var i = 0; i < verBtns.length; i++) {
+      verBtns[i].addEventListener('click', function() { verDetalle(this.getAttribute('data-id')); });
+    }
+    var editBtns = container.querySelectorAll('.btn-edit');
+    for (var i = 0; i < editBtns.length; i++) {
+      editBtns[i].addEventListener('click', function() { openRecetaModal(this.getAttribute('data-id')); });
+    }
+    var delBtns = container.querySelectorAll('.btn-del');
+    for (var i = 0; i < delBtns.length; i++) {
+      delBtns[i].addEventListener('click', function() { deleteReceta(this.getAttribute('data-id')); });
+    }
+  }
+
+  function openRecetaModal(recetaId) {
+    editingRecetaId = recetaId || null;
+    document.getElementById('modalTitle').textContent = recetaId ? 'Editar Receta' : 'Nueva Receta';
+    document.getElementById('recetaName').value = '';
+    document.getElementById('ingredientsList').innerHTML = '';
+
+    if (recetaId) {
+      var r = null;
+      for (var i = 0; i < recetas.length; i++) {
+        if (recetas[i].id === recetaId) { r = recetas[i]; break; }
+      }
+      if (r) {
+        document.getElementById('recetaName').value = r.nombre;
+        for (var j = 0; j < r.ingredientes.length; j++) {
+          addIngredientRow(r.ingredientes[j].id, r.ingredientes[j].cantidad);
+        }
+      }
+    } else {
+      addIngredientRow();
+    }
+    document.getElementById('recetaModal').classList.add('active');
+  }
+
+  function closeRecetaModal() {
+    document.getElementById('recetaModal').classList.remove('active');
+    editingRecetaId = null;
+  }
+
+  function addIngredientRow(selId, qty) {
+    selId = selId || '';
+    qty = qty || 1;
+    var container = document.getElementById('ingredientsList');
+    var row = document.createElement('div');
+    row.className = 'ing-row';
+    var options = '<option value="">-- Seleccionar --</option>';
+    options += '<optgroup label="Materiales Base">';
+    for (var i = 0; i < materiales.length; i++) {
+      var m = materiales[i];
+      var selected = (selId === 'mat_' + m.codigo) ? ' selected' : '';
+      options += '<option value="mat_' + m.codigo + '"' + selected + '>' + m.nombre + '</option>';
+    }
+    options += '</optgroup>';
+    var otrasRecetas = [];
+    for (var j = 0; j < recetas.length; j++) {
+      if (recetas[j].id !== editingRecetaId) otrasRecetas.push(recetas[j]);
+    }
+    if (otrasRecetas.length > 0) {
+      options += '<optgroup label="Recetas">';
+      for (var k = 0; k < otrasRecetas.length; k++) {
+        var r = otrasRecetas[k];
+        var selected2 = (selId === 'rec_' + r.id) ? ' selected' : '';
+        options += '<option value="rec_' + r.id + '"' + selected2 + '>' + r.nombre + '</option>';
+      }
+      options += '</optgroup>';
+    }
+    row.innerHTML = '<select>' + options + '</select><input type="number" min="1" value="' + qty + '" placeholder="Cant."><button type="button" class="remove-btn">X</button>';
+    container.appendChild(row);
+    var removeBtn = row.querySelector('.remove-btn');
+    removeBtn.addEventListener('click', function() { row.remove(); });
+  }
+
+  function saveReceta() {
+    var nombre = document.getElementById('recetaName').value.trim();
+    if (!nombre) { alert('Ingresa un nombre para la receta'); return; }
+    var rows = document.querySelectorAll('#ingredientsList .ing-row');
+    var ingredientes = [];
+    for (var i = 0; i < rows.length; i++) {
+      var sel = rows[i].querySelector('select').value;
+      var qty = parseInt(rows[i].querySelector('input').value);
+      if (!sel || !qty || qty < 1) { alert('Completa todos los ingredientes correctamente'); return; }
+      ingredientes.push({ id: sel, cantidad: qty });
+    }
+    if (ingredientes.length === 0) { alert('Agrega al menos un ingrediente'); return; }
+    if (detectarCiclo(ingredientes, editingRecetaId)) { alert('Se detecto un ciclo. Una receta no puede depender de si misma.'); return; }
+    if (editingRecetaId) {
+      for (var j = 0; j < recetas.length; j++) {
+        if (recetas[j].id === editingRecetaId) {
+          recetas[j] = { id: recetas[j].id, nombre: nombre, ingredientes: ingredientes };
+          break;
+        }
+      }
+    } else {
+      recetas.push({ id: generateId(), nombre: nombre, ingredientes: ingredientes });
+    }
+    saveRecetasToStorage();
+    closeRecetaModal();
+    renderRecetas();
+  }
+
+  function detectarCiclo(ingredientes, recetaActualId, visitados) {
+    if (!visitados) visitados = new Set();
+    for (var i = 0; i < ingredientes.length; i++) {
+      var ing = ingredientes[i];
+      if (ing.id.indexOf('rec_') === 0) {
+        var recId = ing.id.replace('rec_', '');
+        if (recId === recetaActualId) return true;
+        if (visitados.has(recId)) continue;
+        visitados.add(recId);
+        var receta = null;
+        for (var j = 0; j < recetas.length; j++) {
+          if (recetas[j].id === recId) { receta = recetas[j]; break; }
+        }
+        if (receta && detectarCiclo(receta.ingredientes, recetaActualId, visitados)) return true;
+      }
+    }
+    return false;
+  }
+
+  function deleteReceta(id) {
+    if (!confirm('Eliminar esta receta?')) return;
+    var newRecetas = [];
+    for (var i = 0; i < recetas.length; i++) {
+      if (recetas[i].id !== id) newRecetas.push(recetas[i]);
+    }
+    recetas = newRecetas;
+    saveRecetasToStorage();
+    renderRecetas();
+  }
+
+  function verDetalle(id) {
+    var receta = null;
+    for (var i = 0; i < recetas.length; i++) {
+      if (recetas[i].id === id) { receta = recetas[i]; break; }
+    }
+    if (!receta) return;
+    document.getElementById('detalleTitle').textContent = receta.nombre;
+    var resolucion = resolverReceta(receta, 1);
+    var html = '<div style="margin-bottom:16px;"><strong style="color:#e8a0bf;">Ingredientes directos:</strong><ul style="padding-left:20px; margin-top:8px; list-style:none;">';
+    for (var j = 0; j < receta.ingredientes.length; j++) {
+      var ing = receta.ingredientes[j];
+      var esReceta = ing.id.indexOf('rec_') === 0;
+      var nombre = '?';
+      if (esReceta) {
+        for (var k = 0; k < recetas.length; k++) {
+          if (recetas[k].id === ing.id.replace('rec_', '')) { nombre = recetas[k].nombre; break; }
+        }
+      } else {
+        for (var m = 0; m < materiales.length; m++) {
+          if (materiales[m].codigo === ing.id.replace('mat_', '')) { nombre = materiales[m].nombre; break; }
+        }
+      }
+      html += '<li style="padding:4px 0; color:' + (esReceta ? '#8e44ad' : '#4a6fa5') + ';">' + ing.cantidad + ' x ' + nombre + '</li>';
+    }
+    html += '</ul></div>';
+    html += '<div class="resolucion-box"><div class="resolucion-title">Materiales base necesarios (para 1 unidad):</div>';
+    if (resolucion.materiales.length === 0) { html += '<div style="color:#888; padding:8px 0;">Solo contiene otras recetas</div>'; }
+    else {
+      for (var n = 0; n < resolucion.materiales.length; n++) {
+        var mat = resolucion.materiales[n];
+        html += '<div class="resolucion-item"><span class="mat-name">' + mat.nombre + '</span><span class="mat-qty">' + mat.cantidad + '</span></div>';
+      }
+    }
+    html += '</div>';
+    html += '<div class="resolucion-box" style="margin-top:12px;"><div class="resolucion-title">Arbol de receta:</div>';
+    html += renderArbol(receta, 1, new Set());
+    html += '</div>';
+    document.getElementById('detalleBody').innerHTML = html;
+    document.getElementById('detalleModal').classList.add('active');
+  }
+
+  function resolverReceta(receta, multiplicador, visitados) {
+    if (!visitados) visitados = new Set();
+    var materialesTotales = [];
+    var visitadosActual = new Set(visitados);
+    visitadosActual.add(receta.id);
+    for (var i = 0; i < receta.ingredientes.length; i++) {
+      var ing = receta.ingredientes[i];
+      var cant = ing.cantidad * multiplicador;
+      if (ing.id.indexOf('rec_') === 0) {
+        var recId = ing.id.replace('rec_', '');
+        if (visitadosActual.has(recId)) continue;
+        var subReceta = null;
+        for (var j = 0; j < recetas.length; j++) {
+          if (recetas[j].id === recId) { subReceta = recetas[j]; break; }
+        }
+        if (subReceta) {
+          var sub = resolverReceta(subReceta, cant, visitadosActual);
+          for (var k = 0; k < sub.materiales.length; k++) {
+            var m = sub.materiales[k];
+            var existing = null;
+            for (var l = 0; l < materialesTotales.length; l++) {
+              if (materialesTotales[l].codigo === m.codigo) { existing = materialesTotales[l]; break; }
+            }
+            if (existing) existing.cantidad += m.cantidad;
+            else materialesTotales.push(m);
+          }
+        }
+      } else {
+        var matCodigo = ing.id.replace('mat_', '');
+        var mat = null;
+        for (var p = 0; p < materiales.length; p++) {
+          if (materiales[p].codigo === matCodigo) { mat = materiales[p]; break; }
+        }
+        if (mat) {
+          var existing2 = null;
+          for (var q = 0; q < materialesTotales.length; q++) {
+            if (materialesTotales[q].codigo === matCodigo) { existing2 = materialesTotales[q]; break; }
+          }
+          if (existing2) existing2.cantidad += cant;
+          else materialesTotales.push({ codigo: matCodigo, nombre: mat.nombre, cantidad: cant });
+        }
+      }
+    }
+    return { materiales: materialesTotales };
+  }
+
+  function renderArbol(receta, multiplicador, visitados, nivel) {
+    if (!nivel) nivel = 0;
+    if (visitados.has(receta.id)) return '<div class="tree-item" style="padding-left:' + (nivel*16) + 'px; color:#e74c3c;">Ciclo detectado</div>';
+    visitados.add(receta.id);
+    var html = '<div class="tree-item" style="padding-left:' + (nivel*16) + 'px;"><span class="tree-recipe">' + receta.nombre + '</span> x ' + multiplicador + '</div>';
+    for (var i = 0; i < receta.ingredientes.length; i++) {
+      var ing = receta.ingredientes[i];
+      var cant = ing.cantidad * multiplicador;
+      if (ing.id.indexOf('rec_') === 0) {
+        var recId = ing.id.replace('rec_', '');
+        var subReceta = null;
+        for (var j = 0; j < recetas.length; j++) {
+          if (recetas[j].id === recId) { subReceta = recetas[j]; break; }
+        }
+        if (subReceta) html += renderArbol(subReceta, cant, new Set(visitados), nivel + 1);
+      } else {
+        var matCodigo = ing.id.replace('mat_', '');
+        var mat = null;
+        for (var k = 0; k < materiales.length; k++) {
+          if (materiales[k].codigo === matCodigo) { mat = materiales[k]; break; }
+        }
+        var nombre = mat ? mat.nombre : matCodigo;
+        html += '<div class="tree-item" style="padding-left:' + ((nivel+1)*16) + 'px;"><span class="tree-qty">' + cant + '</span> x <span class="ing-material">' + nombre + '</span></div>';
+      }
+    }
+    return html;
+  }
+
+  function closeDetalleModal() { document.getElementById('detalleModal').classList.remove('active'); }
+
+  function exportRecetas() {
+    if (recetas.length === 0) { alert('No hay recetas para exportar'); return; }
+    var data = JSON.stringify(recetas, null, 2);
+    var blob = new Blob([data], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'minecraft_recetas_' + new Date().toISOString().split('T')[0] + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function importRecetas(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var imported = JSON.parse(e.target.result);
+        if (!Array.isArray(imported)) throw new Error('Formato invalido');
+        for (var i = 0; i < imported.length; i++) {
+          var r = imported[i];
+          if (!r.id || !r.nombre || !Array.isArray(r.ingredientes)) throw new Error('Receta invalida');
+        }
+        var action = confirm('Importar ' + imported.length + ' receta(s)?\n\nAceptar = Agregar\nCancelar = Reemplazar todas');
+        if (action) {
+          var existingIds = {};
+          for (var j = 0; j < recetas.length; j++) existingIds[recetas[j].id] = true;
+          var added = 0;
+          for (var k = 0; k < imported.length; k++) {
+            if (!existingIds[imported[k].id]) { recetas.push(imported[k]); added++; }
+          }
+          alert(added + ' receta(s) agregada(s)');
+        } else {
+          recetas = imported;
+          alert(imported.length + ' receta(s) importada(s)');
+        }
+        saveRecetasToStorage();
+        renderRecetas();
+      } catch (err) { alert('Error al importar: ' + err.message); }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  }
+
+  function toggleCalc() {
+    var drawer = document.getElementById('calcDrawer');
+    var tab = document.getElementById('calcTab');
+    var overlay = document.getElementById('overlay');
+    var isOpen = drawer.classList.contains('open');
+    if (isOpen) {
+      drawer.classList.remove('open');
+      tab.classList.remove('active');
+      overlay.classList.remove('active');
+    } else {
+      drawer.classList.add('open');
+      tab.classList.add('active');
+      overlay.classList.add('active');
+    }
+  }
+
+  function updateCalcDisplay() {
+    document.getElementById('calcResult').textContent = calcDisplay;
+    document.getElementById('calcExpression').textContent = calcExpr;
+  }
+
+  function calcNum(n) {
+    if (calcJustEvaluated) { calcExpr = ''; calcDisplay = n; calcJustEvaluated = false; }
+    else { calcDisplay = calcDisplay === '0' ? n : calcDisplay + n; }
+    updateCalcDisplay();
+  }
+
+  function calcDot() {
+    if (calcJustEvaluated) { calcExpr = ''; calcDisplay = '0.'; calcJustEvaluated = false; }
+    else if (calcDisplay.indexOf('.') === -1) { calcDisplay += '.'; }
+    updateCalcDisplay();
+  }
+
+  function calcOp(op) {
+    var opSymbols = { '+': '+', '-': '-', '*': 'x', '/': '/' };
+    if (calcJustEvaluated) { calcExpr = calcDisplay + ' ' + opSymbols[op] + ' '; calcJustEvaluated = false; }
+    else { calcExpr += calcDisplay + ' ' + opSymbols[op] + ' '; }
+    calcDisplay = '0';
+    updateCalcDisplay();
+  }
+
+  function calcEquals() {
+    var fullExpr = calcExpr + calcDisplay;
+    var jsExpr = fullExpr.replace(/x/g, '*');
+    try {
+      var result = Function('"use strict"; return (' + jsExpr + ')')();
+      var formatted = Number.isInteger(result) ? result : parseFloat(result.toFixed(6));
+      calcHist.unshift(fullExpr + ' = ' + formatted);
+      if (calcHist.length > 10) calcHist = calcHist.slice(0, 10);
+      renderCalcHistory();
+      calcDisplay = String(formatted);
+      calcExpr = '';
+      calcJustEvaluated = true;
+    } catch (e) {
+      calcDisplay = 'Error';
+      calcExpr = '';
+      calcJustEvaluated = true;
+    }
+    updateCalcDisplay();
+  }
+
+  function calcClear() { calcExpr = ''; calcDisplay = '0'; calcJustEvaluated = false; updateCalcDisplay(); }
+  function calcBackspace() { if (calcJustEvaluated) { calcClear(); return; } calcDisplay = calcDisplay.slice(0, -1) || '0'; updateCalcDisplay(); }
+  function calcPercent() { var val = parseFloat(calcDisplay); if (!isNaN(val)) { calcDisplay = String(val / 100); updateCalcDisplay(); } }
+
+  function renderCalcHistory() {
+    var container = document.getElementById('calcHistory');
+    var html = '<div class="calc-history-title">Historial</div>';
+    for (var i = 0; i < calcHist.length; i++) {
+      html += '<div class="calc-history-item">' + calcHist[i] + '</div>';
+    }
+    container.innerHTML = html;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

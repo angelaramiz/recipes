@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: recipes
+    runtime: static
+    buildCommand: echo "Static single-file app - no build step"
+    staticPublishPath: .
