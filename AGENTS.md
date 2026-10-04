@@ -23,7 +23,8 @@
 ## Deploy (Render static site)
 - Entrypoint for Render is `index.html` — exact mirror of `sistem_recipe.html` (Render serves `/` from `index.html`; the misspelled name can't be the public URL).
 - Source of truth is `sistem_recipe.html`. After editing it, re-sync: `Copy-Item sistem_recipe.html index.html` and verify hashes match.
-- `render.yaml` blueprint: `type: web` + `runtime: static`, no build step, `staticPublishPath: .`. No SPA rewrite needed (single page, no client-side router).
+- `render.yaml` blueprint: `type: web` + `runtime: static`, no build step, `staticPublishPath: .`, `Cache-Control: no-cache` on `/*` (forces fresh HTML on each deploy; file is ~49KB so no CDN benefit lost). No SPA rewrite needed (single page, no client-side router).
+- Versioning: `APP_VERSION` const in `<script>` + `checkAppVersion()` on `init()` stamps `localStorage.mc_version` and appends `· vX` to the subtitle. It never deletes `mc_recetas`/`mc_history` (same origin = data survives deploys). Release bump = edit version in `sistem_recipe.html` → re-sync → commit + push.
 - `localStorage` (`mc_recetas`, `mc_history`) works as-is on the https origin — no code change needed for deploy. No backend, no env vars, no external requests (fully self-contained).
 - To go live: commit + push to `main`, then Dashboard → New → Static Site → connect `angelaramiz/recipes` (or deploy via `render.yaml` Blueprint).
 

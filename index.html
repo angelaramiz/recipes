@@ -441,6 +441,10 @@
     polvo: "Polvo(s)", gema: "Gema(s)"
   };
 
+  // Version de la app: subir en cada release para invalidar cache del navegador.
+  // Solo toca la clave 'mc_version' — NUNCA borra 'mc_recetas' ni 'mc_history'.
+  var APP_VERSION = '1.0.0';
+
   var recetas = [];
   try {
     recetas = JSON.parse(localStorage.getItem('mc_recetas') || '[]');
@@ -456,11 +460,27 @@
     try { localStorage.setItem('mc_recetas', JSON.stringify(recetas)); } catch(e) {}
   }
 
+  function checkAppVersion() {
+    var stored = null;
+    try { stored = localStorage.getItem('mc_version'); } catch(e) {}
+    if (stored !== APP_VERSION) {
+      // Solo se actualiza la marca de version; recetas e historial se conservan.
+      try { localStorage.setItem('mc_version', APP_VERSION); } catch(e) {}
+      if (stored) console.info('App actualizada: ' + stored + ' -> ' + APP_VERSION + ' (datos conservados)');
+    }
+    var sub = document.querySelector('.subtitle');
+    if (sub && sub.getAttribute('data-version') !== APP_VERSION) {
+      sub.textContent = sub.textContent.replace(/ · v.*$/, '') + ' · v' + APP_VERSION;
+      sub.setAttribute('data-version', APP_VERSION);
+    }
+  }
+
   function generateId() {
     return 'r_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
   }
 
   function init() {
+    checkAppVersion();
     renderMaterialsTable();
     renderRatiosTable();
     renderRecetas();

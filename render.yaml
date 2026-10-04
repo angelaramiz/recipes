@@ -4,3 +4,7 @@ services:
     runtime: static
     buildCommand: echo "Static single-file app - no build step"
     staticPublishPath: .
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
