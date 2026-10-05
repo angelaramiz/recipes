@@ -223,6 +223,9 @@
   .tree-item { padding: 4px 0; font-size: 0.85rem; color: #aaa; }
   .tree-item .tree-qty { color: #e8a0bf; font-weight: 600; }
   .tree-item .tree-recipe { color: #8e44ad; font-weight: 600; }
+  .grafo-wrap { overflow: auto; background: #0f3460; border-radius: 12px; border: 1px solid #2a2a4a; min-height: 200px; }
+  .grafo-wrap svg { display: block; }
+  .grafo-node { cursor: pointer; }
 
   @media (max-width: 480px) {
     .calc-drawer { width: 100%; right: -100%; }
@@ -242,6 +245,7 @@
     <div class="tab" data-tab="recetas">Recetas</div>
     <div class="tab" data-tab="materials">Materiales</div>
     <div class="tab" data-tab="history">Historial</div>
+    <div class="tab" data-tab="grafo">Grafo</div>
   </div>
 
   <div id="tab-calc" class="tab-content active">
@@ -289,6 +293,11 @@
 
   <div id="tab-recetas" class="tab-content">
     <div class="card">
+      <h2>App Android</h2>
+      <a class="btn" href="recetas.apk" download style="display:block; text-align:center; text-decoration:none;">Descargar APK</a>
+      <div class="result-detail" style="margin-top:8px;">Instalable + actualizaciones automáticas (OTA)</div>
+    </div>
+    <div class="card">
       <h2>Mis Recetas</h2>
       <button class="btn" id="btnNuevaReceta" type="button">+ Nueva Receta</button>
       <div style="margin-top:12px; display:flex; gap:8px;">
@@ -315,6 +324,13 @@
         <tbody id="ratiosTable"></tbody>
       </table>
     </div>
+    <div class="card table-card">
+      <h2>Máquinas (planos)</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Nombre</th></tr></thead>
+        <tbody id="maquinasTable"></tbody>
+      </table>
+    </div>
   </div>
 
   <div id="tab-history" class="tab-content">
@@ -322,6 +338,23 @@
       <h2>Historial</h2>
       <div id="historyList"><div class="empty-msg">Aun no hay calculos</div></div>
       <button class="btn btn-danger" id="btnClearHistory" type="button" style="margin-top:16px;">Limpiar historial</button>
+    </div>
+  </div>
+
+  <div id="tab-grafo" class="tab-content">
+    <div class="card">
+      <h2>Grafo de flujo</h2>
+      <div class="form-group">
+        <label>Receta raíz</label>
+        <select id="grafoRoot"><option value="">-- Seleccionar --</option></select>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <button class="btn btn-secondary btn-small" id="btnZoomIn" type="button" style="flex:1;">+</button>
+        <button class="btn btn-secondary btn-small" id="btnZoomOut" type="button" style="flex:1;">−</button>
+        <button class="btn btn-secondary btn-small" id="btnZoomReset" type="button" style="flex:1;">1:1</button>
+      </div>
+      <div class="grafo-wrap" id="grafoWrap"><div class="empty-msg">Selecciona una receta para ver su flujo</div></div>
+      <div class="result-detail" style="margin-top:8px;">Toca un nodo para ver su detalle</div>
     </div>
   </div>
 </div>
@@ -341,6 +374,20 @@
         <label>Ingredientes</label>
         <div id="ingredientsList"></div>
         <button class="add-ing-btn" id="btnAddIng" type="button">+ Agregar ingrediente</button>
+      </div>
+      <div class="form-group">
+        <label>Plano — máquina (opcional)</label>
+        <select id="recetaMaquina"></select>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <div class="form-group" style="flex:1;">
+          <label>Tiempo (seg)</label>
+          <input type="number" id="recetaTiempo" min="0" placeholder="0">
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label>Energía</label>
+          <input type="number" id="recetaEnergia" min="0" placeholder="0">
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -441,6 +488,44 @@
     polvo: "Polvo(s)", gema: "Gema(s)"
   };
 
+  // Planos: maquina/tiempo/energia son opcionales por receta.
+  // Sin ellos la receta es crafteo manual (compatible con datos viejos).
+  var maquinas = [
+    { id: 'manual', nombre: 'Crafteo manual' },
+    { id: 'mesa', nombre: 'Mesa de trabajo' },
+    { id: 'horno', nombre: 'Horno' },
+    { id: 'fundicion', nombre: 'Alto horno / Fundición' },
+    { id: 'yunque', nombre: 'Yunque' },
+    { id: 'encantamiento', nombre: 'Mesa de encantamientos' },
+    { id: 'alquimia', nombre: 'Soporte de alquimia' }
+  ];
+
+  function nombreMaquina(id) {
+    for (var i = 0; i < maquinas.length; i++) {
+      if (maquinas[i].id === id) return maquinas[i].nombre;
+    }
+    return 'Crafteo manual';
+  }
+
+  function maquinaDe(r) { return (r && typeof r.maquina === 'string' && r.maquina) ? r.maquina : 'manual'; }
+  function tiempoDe(r) { return (r && typeof r.tiempo === 'number' && r.tiempo > 0) ? r.tiempo : 0; }
+  function energiaDe(r) { return (r && typeof r.energia === 'number' && r.energia > 0) ? r.energia : 0; }
+
+  function nombreIngrediente(ing) {
+    if (ing.id.indexOf('rec_') === 0) {
+      var recId = ing.id.replace('rec_', '');
+      for (var i = 0; i < recetas.length; i++) {
+        if (recetas[i].id === recId) return { nombre: recetas[i].nombre, esReceta: true };
+      }
+      return { nombre: ing.id, esReceta: true };
+    }
+    var matCodigo = ing.id.indexOf('mat_') === 0 ? ing.id.replace('mat_', '') : ing.id;
+    for (var j = 0; j < materiales.length; j++) {
+      if (materiales[j].codigo === matCodigo) return { nombre: materiales[j].nombre, esReceta: false };
+    }
+    return { nombre: ing.id, esReceta: false };
+  }
+
   // Version de la app: subir en cada release para invalidar cache del navegador.
   // Solo toca la clave 'mc_version' — NUNCA borra 'mc_recetas' ni 'mc_history'.
   var APP_VERSION = '1.0.0';
@@ -451,6 +536,8 @@
   } catch(e) { recetas = []; }
 
   var editingRecetaId = null;
+  var grafoRootId = '';
+  var grafoZoom = 1;
   var calcExpr = '';
   var calcDisplay = '0';
   var calcJustEvaluated = false;
@@ -483,6 +570,7 @@
     checkAppVersion();
     renderMaterialsTable();
     renderRatiosTable();
+    renderMaquinasTable();
     renderRecetas();
     setupTabs();
     setupCalcButtons();
@@ -500,6 +588,7 @@
         document.getElementById('tab-' + tabName).classList.add('active');
         if (tabName === 'history') renderHistory();
         if (tabName === 'recetas') renderRecetas();
+        if (tabName === 'grafo') renderGrafo();
       });
     }
   }
@@ -537,6 +626,10 @@
     document.getElementById('btnAddIng').addEventListener('click', function() { addIngredientRow(); });
     document.getElementById('btnCloseDetalle').addEventListener('click', closeDetalleModal);
     document.getElementById('btnCloseDetalle2').addEventListener('click', closeDetalleModal);
+    document.getElementById('grafoRoot').addEventListener('change', function() { grafoRootId = this.value; renderGrafo(); });
+    document.getElementById('btnZoomIn').addEventListener('click', function() { grafoZoom = Math.min(3, grafoZoom + 0.25); renderGrafo(); });
+    document.getElementById('btnZoomOut').addEventListener('click', function() { grafoZoom = Math.max(0.5, grafoZoom - 0.25); renderGrafo(); });
+    document.getElementById('btnZoomReset').addEventListener('click', function() { grafoZoom = 1; renderGrafo(); });
     document.getElementById('calcTab').addEventListener('click', toggleCalc);
     document.getElementById('btnCloseCalc').addEventListener('click', toggleCalc);
     document.getElementById('overlay').addEventListener('click', toggleCalc);
@@ -700,6 +793,15 @@
     tbody.innerHTML = html;
   }
 
+  function renderMaquinasTable() {
+    var tbody = document.getElementById('maquinasTable');
+    var html = '';
+    for (var i = 0; i < maquinas.length; i++) {
+      html += '<tr><td><strong>' + maquinas[i].id + '</strong></td><td>' + maquinas[i].nombre + '</td></tr>';
+    }
+    tbody.innerHTML = html;
+  }
+
   function renderRecetas() {
     var container = document.getElementById('recetasList');
     if (recetas.length === 0) {
@@ -711,28 +813,15 @@
       var r = recetas[i];
       var ingsHtml = '';
       for (var j = 0; j < r.ingredientes.length; j++) {
-        var ing = r.ingredientes[j];
-        var esReceta = false;
-        var nombre = ing.id;
-        for (var k = 0; k < recetas.length; k++) {
-          if (recetas[k].id === ing.id) {
-            esReceta = true;
-            nombre = recetas[k].nombre;
-            break;
-          }
-        }
-        if (!esReceta) {
-          for (var m = 0; m < materiales.length; m++) {
-            if (materiales[m].codigo === ing.id) {
-              nombre = materiales[m].nombre;
-              break;
-            }
-          }
-        }
-        var cls = esReceta ? 'ing-recipe' : 'ing-material';
-        ingsHtml += '<li class="' + cls + '">' + ing.cantidad + ' x ' + nombre + '</li>';
+        var res2 = nombreIngrediente(r.ingredientes[j]);
+        var cls = res2.esReceta ? 'ing-recipe' : 'ing-material';
+        ingsHtml += '<li class="' + cls + '">' + r.ingredientes[j].cantidad + ' x ' + res2.nombre + '</li>';
       }
-      html += '<div class="receta-card"><div class="receta-header"><div class="receta-name">' + r.nombre + '</div><div class="receta-actions"><button type="button" class="btn-ver" data-id="' + r.id + '">Ver</button><button type="button" class="btn-edit" data-id="' + r.id + '">Editar</button><button type="button" class="delete btn-del" data-id="' + r.id + '">Eliminar</button></div></div><ul class="receta-ingredients">' + ingsHtml + '</ul></div>';
+      var planoTxt = '';
+      if (maquinaDe(r) !== 'manual') {
+        planoTxt = '<div style="font-size:0.8rem; color:#888; margin-bottom:8px;">⚙ ' + nombreMaquina(maquinaDe(r)) + (tiempoDe(r) > 0 ? ' · ' + tiempoDe(r) + 's' : '') + '</div>';
+      }
+      html += '<div class="receta-card"><div class="receta-header"><div class="receta-name">' + r.nombre + '</div><div class="receta-actions"><button type="button" class="btn-ver" data-id="' + r.id + '">Ver</button><button type="button" class="btn-edit" data-id="' + r.id + '">Editar</button><button type="button" class="delete btn-del" data-id="' + r.id + '">Eliminar</button></div></div>' + planoTxt + '<ul class="receta-ingredients">' + ingsHtml + '</ul></div>';
     }
     container.innerHTML = html;
 
@@ -755,6 +844,13 @@
     document.getElementById('modalTitle').textContent = recetaId ? 'Editar Receta' : 'Nueva Receta';
     document.getElementById('recetaName').value = '';
     document.getElementById('ingredientsList').innerHTML = '';
+    var maqSel = document.getElementById('recetaMaquina');
+    maqSel.innerHTML = '';
+    for (var mi = 0; mi < maquinas.length; mi++) {
+      maqSel.innerHTML += '<option value="' + maquinas[mi].id + '">' + maquinas[mi].nombre + '</option>';
+    }
+    document.getElementById('recetaTiempo').value = '';
+    document.getElementById('recetaEnergia').value = '';
 
     if (recetaId) {
       var r = null;
@@ -763,6 +859,9 @@
       }
       if (r) {
         document.getElementById('recetaName').value = r.nombre;
+        document.getElementById('recetaMaquina').value = maquinaDe(r);
+        if (tiempoDe(r) > 0) document.getElementById('recetaTiempo').value = tiempoDe(r);
+        if (energiaDe(r) > 0) document.getElementById('recetaEnergia').value = energiaDe(r);
         for (var j = 0; j < r.ingredientes.length; j++) {
           addIngredientRow(r.ingredientes[j].id, r.ingredientes[j].cantidad);
         }
@@ -824,15 +923,20 @@
     }
     if (ingredientes.length === 0) { alert('Agrega al menos un ingrediente'); return; }
     if (detectarCiclo(ingredientes, editingRecetaId)) { alert('Se detecto un ciclo. Una receta no puede depender de si misma.'); return; }
+    var maquina = document.getElementById('recetaMaquina').value || 'manual';
+    var tiempo = parseFloat(document.getElementById('recetaTiempo').value);
+    var energia = parseFloat(document.getElementById('recetaEnergia').value);
+    if (isNaN(tiempo) || tiempo < 0) tiempo = 0;
+    if (isNaN(energia) || energia < 0) energia = 0;
     if (editingRecetaId) {
       for (var j = 0; j < recetas.length; j++) {
         if (recetas[j].id === editingRecetaId) {
-          recetas[j] = { id: recetas[j].id, nombre: nombre, ingredientes: ingredientes };
+          recetas[j] = { id: recetas[j].id, nombre: nombre, ingredientes: ingredientes, maquina: maquina, tiempo: tiempo, energia: energia };
           break;
         }
       }
     } else {
-      recetas.push({ id: generateId(), nombre: nombre, ingredientes: ingredientes });
+      recetas.push({ id: generateId(), nombre: nombre, ingredientes: ingredientes, maquina: maquina, tiempo: tiempo, energia: energia });
     }
     saveRecetasToStorage();
     closeRecetaModal();
@@ -894,6 +998,11 @@
       html += '<li style="padding:4px 0; color:' + (esReceta ? '#8e44ad' : '#4a6fa5') + ';">' + ing.cantidad + ' x ' + nombre + '</li>';
     }
     html += '</ul></div>';
+    html += '<div class="resolucion-box" style="margin-bottom:12px;"><div class="resolucion-title">Plano:</div>';
+    html += '<div class="resolucion-item"><span class="mat-name">Máquina</span><span class="mat-qty">' + nombreMaquina(maquinaDe(receta)) + '</span></div>';
+    if (tiempoDe(receta) > 0) html += '<div class="resolucion-item"><span class="mat-name">Tiempo (1 unidad)</span><span class="mat-qty">' + tiempoDe(receta) + 's</span></div>';
+    if (energiaDe(receta) > 0) html += '<div class="resolucion-item"><span class="mat-name">Energía (1 unidad)</span><span class="mat-qty">' + energiaDe(receta) + '</span></div>';
+    html += '</div>';
     html += '<div class="resolucion-box"><div class="resolucion-title">Materiales base necesarios (para 1 unidad):</div>';
     if (resolucion.materiales.length === 0) { html += '<div style="color:#888; padding:8px 0;">Solo contiene otras recetas</div>'; }
     else {
@@ -902,6 +1011,16 @@
         html += '<div class="resolucion-item"><span class="mat-name">' + mat.nombre + '</span><span class="mat-qty">' + mat.cantidad + '</span></div>';
       }
     }
+    html += '</div>';
+    html += '<div class="resolucion-box" style="margin-top:12px;"><div class="resolucion-title">Proceso total (para 1 unidad):</div>';
+    html += '<div class="resolucion-item"><span class="mat-name">Tiempo total</span><span class="mat-qty">' + resolucion.tiempo + 's</span></div>';
+    html += '<div class="resolucion-item"><span class="mat-name">Energía total</span><span class="mat-qty">' + resolucion.energia + '</span></div>';
+    var cuello = null;
+    for (var b = 0; b < resolucion.maquinas.length; b++) {
+      if (!cuello || resolucion.maquinas[b].tiempo > cuello.tiempo) cuello = resolucion.maquinas[b];
+    }
+    if (cuello) html += '<div class="resolucion-item"><span class="mat-name">Cuello de botella</span><span class="mat-qty">' + cuello.nombre + ' (' + cuello.tiempo + 's)</span></div>';
+    else html += '<div class="resolucion-item"><span class="mat-name">Cuello de botella</span><span class="mat-qty">Todo manual</span></div>';
     html += '</div>';
     html += '<div class="resolucion-box" style="margin-top:12px;"><div class="resolucion-title">Arbol de receta:</div>';
     html += renderArbol(receta, 1, new Set());
@@ -913,6 +1032,12 @@
   function resolverReceta(receta, multiplicador, visitados) {
     if (!visitados) visitados = new Set();
     var materialesTotales = [];
+    var tiempoTotal = tiempoDe(receta) * multiplicador;
+    var energiaTotal = energiaDe(receta) * multiplicador;
+    var maquinasTotales = [];
+    if (maquinaDe(receta) !== 'manual' && tiempoDe(receta) > 0) {
+      maquinasTotales.push({ id: maquinaDe(receta), nombre: nombreMaquina(maquinaDe(receta)), tiempo: tiempoDe(receta) * multiplicador });
+    }
     var visitadosActual = new Set(visitados);
     visitadosActual.add(receta.id);
     for (var i = 0; i < receta.ingredientes.length; i++) {
@@ -936,6 +1061,17 @@
             if (existing) existing.cantidad += m.cantidad;
             else materialesTotales.push(m);
           }
+          tiempoTotal += sub.tiempo;
+          energiaTotal += sub.energia;
+          for (var k2 = 0; k2 < sub.maquinas.length; k2++) {
+            var sm = sub.maquinas[k2];
+            var se = null;
+            for (var l2 = 0; l2 < maquinasTotales.length; l2++) {
+              if (maquinasTotales[l2].id === sm.id) { se = maquinasTotales[l2]; break; }
+            }
+            if (se) se.tiempo += sm.tiempo;
+            else maquinasTotales.push({ id: sm.id, nombre: sm.nombre, tiempo: sm.tiempo });
+          }
         }
       } else {
         var matCodigo = ing.id.replace('mat_', '');
@@ -953,14 +1089,15 @@
         }
       }
     }
-    return { materiales: materialesTotales };
+    return { materiales: materialesTotales, tiempo: tiempoTotal, energia: energiaTotal, maquinas: maquinasTotales };
   }
 
   function renderArbol(receta, multiplicador, visitados, nivel) {
     if (!nivel) nivel = 0;
     if (visitados.has(receta.id)) return '<div class="tree-item" style="padding-left:' + (nivel*16) + 'px; color:#e74c3c;">Ciclo detectado</div>';
     visitados.add(receta.id);
-    var html = '<div class="tree-item" style="padding-left:' + (nivel*16) + 'px;"><span class="tree-recipe">' + receta.nombre + '</span> x ' + multiplicador + '</div>';
+    var tagMaq = maquinaDe(receta) === 'manual' ? '' : ' <span style="color:#4a6fa5;">[' + nombreMaquina(maquinaDe(receta)) + ']</span>';
+    var html = '<div class="tree-item" style="padding-left:' + (nivel*16) + 'px;"><span class="tree-recipe">' + receta.nombre + '</span> x ' + multiplicador + tagMaq + '</div>';
     for (var i = 0; i < receta.ingredientes.length; i++) {
       var ing = receta.ingredientes[i];
       var cant = ing.cantidad * multiplicador;
@@ -982,6 +1119,156 @@
       }
     }
     return html;
+  }
+
+  // Grafo de flujo: layout por capas (nivel = profundidad desde la raiz).
+  // Solo lectura para el visor SVG; la edicion sigue en el modal.
+  function computeGrafo(recetaId) {
+    var raiz = null;
+    for (var i = 0; i < recetas.length; i++) {
+      if (recetas[i].id === recetaId) { raiz = recetas[i]; break; }
+    }
+    if (!raiz) return { nodos: [], aristas: [] };
+    var niveles = {};
+    niveles[recetaId] = 0;
+    var vistos = {};
+    vistos[recetaId] = true;
+    var cola = [recetaId];
+    var aristas = [];
+    while (cola.length > 0) {
+      var actual = cola.shift();
+      var rec = null;
+      for (var j = 0; j < recetas.length; j++) {
+        if (recetas[j].id === actual) { rec = recetas[j]; break; }
+      }
+      if (!rec) continue;
+      for (var k = 0; k < rec.ingredientes.length; k++) {
+        var ing = rec.ingredientes[k];
+        if (ing.id.indexOf('rec_') !== 0) continue;
+        var hijo = ing.id.replace('rec_', '');
+        var existe = false;
+        for (var m = 0; m < recetas.length; m++) {
+          if (recetas[m].id === hijo) { existe = true; break; }
+        }
+        if (!existe) continue;
+        aristas.push({ de: actual, a: hijo, cantidad: ing.cantidad });
+        if (!vistos[hijo]) { vistos[hijo] = true; cola.push(hijo); }
+      }
+    }
+    // Niveles por camino MAS largo (lectura de flujo izq->der).
+    // Datos aciclicos por detectarCiclo; el tope de pasadas blinda igual.
+    niveles[recetaId] = 0;
+    var cambio = true;
+    var pasadas = 0;
+    while (cambio && pasadas < recetas.length + 1) {
+      cambio = false;
+      pasadas++;
+      for (var a = 0; a < aristas.length; a++) {
+        var e = aristas[a];
+        if (e.de in niveles) {
+          var cand = niveles[e.de] + 1;
+          if (!(e.a in niveles) || niveles[e.a] < cand) { niveles[e.a] = cand; cambio = true; }
+        }
+      }
+    }
+    var porNivel = {};
+    for (var id in niveles) {
+      var r = null;
+      for (var n = 0; n < recetas.length; n++) {
+        if (recetas[n].id === id) { r = recetas[n]; break; }
+      }
+      if (!r) continue;
+      var nv = niveles[id];
+      if (!porNivel[nv]) porNivel[nv] = [];
+      porNivel[nv].push({ id: id, nombre: r.nombre, nivel: nv, maquina: maquinaDe(r) });
+    }
+    var nodos = [];
+    for (var lv in porNivel) {
+      var grupo = porNivel[lv];
+      for (var g = 0; g < grupo.length; g++) {
+        grupo[g].x = parseInt(lv, 10) * 240 + 20;
+        grupo[g].y = g * 100 + 30;
+        nodos.push(grupo[g]);
+      }
+    }
+    return { nodos: nodos, aristas: aristas };
+  }
+
+  var MAQ_COLORES = {
+    manual: '#4a6fa5', mesa: '#8e44ad', horno: '#e67e22', fundicion: '#c0392b',
+    yunque: '#7f8c8d', encantamiento: '#9b59b6', alquimia: '#27ae60'
+  };
+
+  function escSvg(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function renderGrafo() {
+    var sel = document.getElementById('grafoRoot');
+    var actual = sel.value || grafoRootId;
+    sel.innerHTML = '<option value="">-- Seleccionar --</option>';
+    for (var i = 0; i < recetas.length; i++) {
+      sel.innerHTML += '<option value="' + recetas[i].id + '"' + (recetas[i].id === actual ? ' selected' : '') + '>' + escSvg(recetas[i].nombre) + '</option>';
+    }
+    grafoRootId = sel.value || '';
+    var wrap = document.getElementById('grafoWrap');
+    if (!grafoRootId) {
+      wrap.innerHTML = '<div class="empty-msg">Selecciona una receta para ver su flujo</div>';
+      return;
+    }
+    var g = computeGrafo(grafoRootId);
+    if (g.nodos.length === 0) {
+      wrap.innerHTML = '<div class="empty-msg">Sin flujo (receta sin subrecetas o inexistente)</div>';
+      return;
+    }
+    var raiz = null;
+    for (var r = 0; r < recetas.length; r++) {
+      if (recetas[r].id === grafoRootId) { raiz = recetas[r]; break; }
+    }
+    var cuelloId = null;
+    if (raiz) {
+      var res = resolverReceta(raiz, 1, recetas, materiales, maquinas);
+      var top = null;
+      for (var b = 0; b < res.maquinas.length; b++) {
+        if (!top || res.maquinas[b].tiempo > top.tiempo) top = res.maquinas[b];
+      }
+      if (top) cuelloId = top.id;
+    }
+    var maxX = 0, maxY = 0, porId = {};
+    for (var n = 0; n < g.nodos.length; n++) {
+      var nd = g.nodos[n];
+      porId[nd.id] = nd;
+      if (nd.x > maxX) maxX = nd.x;
+      if (nd.y > maxY) maxY = nd.y;
+    }
+    var W = maxX + 240, H = maxY + 130;
+    var svg = '<svg width="' + (W * grafoZoom) + '" height="' + (H * grafoZoom) + '" viewBox="0 0 ' + W + ' ' + H + '">';
+    for (var e = 0; e < g.aristas.length; e++) {
+      var a = g.aristas[e];
+      var d1 = porId[a.de], d2 = porId[a.a];
+      if (!d1 || !d2) continue;
+      var x1 = d1.x + 200, y1 = d1.y + 32, x2 = d2.x, y2 = d2.y + 32;
+      var mx = (x1 + x2) / 2;
+      svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#e8a0bf" stroke-width="2"/>';
+      svg += '<text x="' + mx + '" y="' + ((y1 + y2) / 2 - 6) + '" fill="#e8a0bf" font-size="13" font-weight="bold" text-anchor="middle">x' + a.cantidad + '</text>';
+    }
+    for (var k = 0; k < g.nodos.length; k++) {
+      var nn = g.nodos[k];
+      var color = MAQ_COLORES[nn.maquina] || '#4a6fa5';
+      var stroke = (nn.maquina !== 'manual' && nn.maquina === cuelloId) ? ' stroke="#e74c3c" stroke-width="3"' : ' stroke="#2a2a4a" stroke-width="1"';
+      var nom = escSvg(nn.nombre.length > 24 ? nn.nombre.slice(0, 23) + '…' : nn.nombre);
+      svg += '<g class="grafo-node" data-id="' + nn.id + '">';
+      svg += '<rect x="' + nn.x + '" y="' + nn.y + '" width="200" height="64" rx="12" fill="' + color + '"' + stroke + '/>';
+      svg += '<text x="' + (nn.x + 100) + '" y="' + (nn.y + 26) + '" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">' + nom + '</text>';
+      svg += '<text x="' + (nn.x + 100) + '" y="' + (nn.y + 46) + '" fill="#e0e0e0" font-size="12" text-anchor="middle">' + escSvg(nombreMaquina(nn.maquina)) + '</text>';
+      svg += '</g>';
+    }
+    svg += '</svg>';
+    wrap.innerHTML = svg;
+    var nodes = wrap.querySelectorAll('.grafo-node');
+    for (var q = 0; q < nodes.length; q++) {
+      nodes[q].addEventListener('click', function() { verDetalle(this.getAttribute('data-id')); });
+    }
   }
 
   function closeDetalleModal() { document.getElementById('detalleModal').classList.remove('active'); }
@@ -1011,6 +1298,9 @@
         for (var i = 0; i < imported.length; i++) {
           var r = imported[i];
           if (!r.id || !r.nombre || !Array.isArray(r.ingredientes)) throw new Error('Receta invalida');
+          if (r.maquina !== undefined && typeof r.maquina !== 'string') throw new Error('Maquina invalida en: ' + r.nombre);
+          if (r.tiempo !== undefined && (typeof r.tiempo !== 'number' || r.tiempo < 0)) throw new Error('Tiempo invalido en: ' + r.nombre);
+          if (r.energia !== undefined && (typeof r.energia !== 'number' || r.energia < 0)) throw new Error('Energia invalida en: ' + r.nombre);
         }
         var action = confirm('Importar ' + imported.length + ' receta(s)?\n\nAceptar = Agregar\nCancelar = Reemplazar todas');
         if (action) {
@@ -1105,6 +1395,18 @@
       html += '<div class="calc-history-item">' + calcHist[i] + '</div>';
     }
     container.innerHTML = html;
+  }
+
+  // Hook para tests (node --test test/). No afecta al navegador.
+  if (typeof window !== 'undefined' && window) {
+    window.__mcTest = {
+      detectarCiclo: detectarCiclo,
+      resolverReceta: resolverReceta,
+      maquinaDe: maquinaDe, tiempoDe: tiempoDe, energiaDe: energiaDe,
+      nombreMaquina: nombreMaquina, nombreIngrediente: nombreIngrediente,
+      renderRecetas: renderRecetas, computeGrafo: computeGrafo,
+      state: function() { return { recetas: recetas, materiales: materiales, maquinas: maquinas, conversiones: conversiones }; }
+    };
   }
 
   if (document.readyState === 'loading') {
