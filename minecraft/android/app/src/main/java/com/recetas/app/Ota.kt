@@ -15,7 +15,7 @@ import java.net.URL
 
 // OTA sin backend: version.json estatico servido por Render.
 // Cambiar si el sitio usa otro dominio.
-const val OTA_VERSION_URL = "https://recipes.onrender.com/version.json"
+const val OTA_VERSION_URL = "https://recipes-kopv.onrender.com/version.json"
 
 @Serializable
 data class VersionRemota(val versionCode: Int, val versionName: String, val apkUrl: String)
