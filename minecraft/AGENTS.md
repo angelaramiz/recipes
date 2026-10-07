@@ -42,7 +42,7 @@
 - `render.yaml` (en la RAÍZ del repo) blueprint: `type: web` + `runtime: static`, no build step, `staticPublishPath: minecraft`, `Cache-Control: no-cache` on `/*` (forces fresh HTML on each deploy; file is ~57KB so no CDN benefit lost). No SPA rewrite needed (single page, no client-side router).
 - Versioning: `APP_VERSION` const in `<script>` + `checkAppVersion()` on `init()` stamps `localStorage.mc_version` and appends `· vX` to the subtitle. It never deletes `mc_recetas`/`mc_history` (same origin = data survives deploys). Release bump = edit version in `sistem_recipe.html` → re-sync → commit + push.
 - `localStorage` (`mc_recetas`, `mc_history`) works as-is on the https origin — no code change needed for deploy. No backend, no env vars, no external requests (fully self-contained).
-- El sitio sirve `recetas.apk` (botón "Descargar APK" en tab Recetas) + `version.json` (fuente OTA) en su raíz — el publish dir `minecraft/` se vuelve la raíz del sitio, SIN prefijo `/minecraft` en las URLs. Tras crear el Static Site, verificar que `OTA_VERSION_URL` en `Ota.kt` sea el dominio real.
+- El sitio sirve `recetas.apk` (botón global "Descargar APK" bajo el título, visible en todos los tabs) + `version.json` (fuente OTA) en su raíz — el publish dir `minecraft/` se vuelve la raíz del sitio, SIN prefijo `/minecraft` en las URLs. Tras crear el Static Site, verificar que `OTA_VERSION_URL` en `Ota.kt` sea el dominio real.
 - To go live: commit + push to `main`, then Dashboard → New → Static Site → connect `angelaramiz/recipes` (or deploy via `render.yaml` Blueprint).
 
 ## Workflow
